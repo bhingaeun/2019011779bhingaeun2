@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <title></title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, maximum-scale=1, initial-scale=1, user-scalable=no" />
+    <link href="../sdk/third/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+
+    <!-- THEME CSS -->
+    <link href="../sdk/third/css/essentials.css" rel="stylesheet" />
+    <link href="../sdk/third/css/layout-dark.css" rel="stylesheet" />
+    <link href="../sdk/third/jstree/themes/proton/style.min.css" rel="stylesheet" />
+    <link href="../sdk/viz/ui/default.css" rel="stylesheet" type="text/css" />
+    <link href="../sdk/third/css/jquery-ui-1.10.4.custom.css" rel="stylesheet" />
+    <link href="../sdk/third/toolbar/jquery.toolbar.css" rel="stylesheet" />
+
+    <script src="../sdk/third/jquery-1.10.2.min.js"></script>
+    <script src="../sdk/third/jquery-ui.min.js"></script>
+    <script src="../sdk/third/jquery-dialog.js"></script>
+    <script src="../sdk/third/bootstrap.min.js"></script>
+    <script src="../sdk/third/jstree/jstree.js"></script>
+    <script src="../sdk/third/jquery-slider/jquery-ui-slider-pips.min.js"></script>
+    <script src="../sdk/third/toolbar/jquery.toolbar.js"></script>
+
+    <script src="../sdk/viz/bimviz.js"></script>
+
+    <script src="../sdk/viz/ui/DefaultMessageControl.js"></script>
+
+</head>
+<body >
+<div id="messages"></div>
+<div id="viewport"> </div>
+
+
+
+<script>
+
+
+    // note start
+    //     请先填写参数，再浏览该案例文件，参数如下：
+    //         projId：项目id
+    //         ip：bimviz服务器地址，若使用的是公有云，ip为cloud.bimviz.io，使用的是私有云，ip为私有云服务器地址
+    //         port：公有云端口是10001，私有云默认端口7005
+    //         key：用户的key值
+    // note end
+
+
+    var projId = "";
+    var bimEngine = new BIMVIZ.RenderEngine({
+        projectId: projId,
+        renderDomId: 'viewport',
+        ip: "",
+        port:,
+        key: '',
+        resizeMode: 'fullpage',
+        resourcePath:'../sdk/viz/data/',
+        quickBox:"show",
+        selectSettings:{
+            cameraMove:false
+        }
+    });
+
+    var msgControl = new BIMVIZ.UI.DefaultMessageControl(bimEngine, 'messages');
+
+    bimEngine.addListener(BIMVIZ.EVENT.ProjectOverviewLoaded,function(evt){
+        var modelCenter = evt.args.center;
+        bimEngine.setLookFrom(BIMVIZ.BoxPosition.TopCenter, true);
+        bimEngine.addListener(BIMVIZ.EVENT.OnSceneLoadCompleted,function(){
+            var template="<div style='position: absolute;left: 0;top: 0;'> \
+                          <ul id='pannel' style='list-style-type:none;width: 200px;'></ul>\
+                      </div>";
+            $("body").append(template);
+            var stroeys=evt.args.spaces;
+            var storeyBoxs=[];
+            stroeys.forEach(function (value,index) {
+                var list="<li style='padding: 10px;margin: 2px;border: 1px solid #000000;width: 100%'>"+value.Id+"</li>";
+                $("#pannel").append(list);
+                storeyBoxs.push(value.BoundingBox);
+            });
+            $("#pannel").on("click","li",function(){
+                hideAll();
+                var index=$(this).index();
+                // 显示楼层
+                bimEngine.showBuildingStorey(index+1,true);
+
+                var centerX = storeyBoxs[index].X + storeyBoxs[index].SizeX / 2 - modelCenter.X;
+                var centerY = storeyBoxs[index].Y + storeyBoxs[index].SizeY / 2 - modelCenter.Y;
+                var centerZ = storeyBoxs[index].Z + storeyBoxs[index].SizeZ / 2 - modelCenter.Z;
+                var target={  // 楼层中心点，即目标观察点
+                    x: centerX,
+                    y: centerY,
+                    z: centerZ
+                };
+                var positionZ=storeyBoxs[index].Z+Math.sqrt(Math.pow(storeyBoxs[index].SizeX,2)+Math.pow(storeyBoxs[index].SizeY,2));
+                var position={
+                    x:centerX,
+                    y:centerY-10,
+                    z:positionZ
+                };
+
+                // 相机视点飞到楼层顶部
+                bimEngine.flyFromTo(position,target);
+            });
+            function hideAll(){
+                for(var i=0;i<stroeys.length;i++){
+                    var id=stroeys[i].Id;
+                    bimEngine.showBuildingStorey(id,false);
+                }
+            }
+        });
+    });
+
+    bimEngine.start();
+
+
+
+
+
+</script>
+</body>
+</html>
